@@ -1,0 +1,2835 @@
+openapi: 3.0.3
+info:
+  title: EduConnect API 
+  version: 1.0.0
+  description: ekhane description 
+servers:
+- description: SwaggerHub API Auto Mocking
+  url: https://virtserver.swaggerhub.com/buet-55d/EduConnect/1.0.0
+- description: SwaggerHub API Auto Mocking
+  url: https://virtserver.swaggerhub.com/moyen/eduConnect/1.0.0
+- url: http://localhost:8000
+tags:
+- name: Auth
+  description: Endpoints for tracking learning progress.
+- name: User
+  description: User API
+- name: me
+  description: My User API
+
+- name: channel
+  description: Channel API
+- name: messages
+  description: Chat API
+- name: Live Exams
+  description: Live Exam API
+- name: Customized Exams
+  description: Customized Exam API
+- name: Submissions
+  description: Submissions API
+- name: Problems
+  description: Problems API
+- name: QuestionSetter
+- name: file
+- name: Progress
+- name: AI_assistance
+- name: Notification
+  description: Endpoints for users to manage their notifications.
+- name: Admin
+  description: Administrative endpoints for managing users, content, and system usage.
+
+
+paths:
+  /customized:
+    post:
+      summary: Generate a customized exam for the user
+      description: Creates a new customized exam with user-defined parameters and returns the ID of the generated exam.
+      tags:
+        - Customized Exams
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic:
+                  type: string
+                subject:
+                  type: string
+                time:
+                  type: integer
+                  description: Duration of the exam in minutes
+                number_of_questions:
+                  type: integer
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard]
+                type:
+                  type: string
+                  enum: [mcq, fill in the blanks]
+      responses:
+        '201':
+          description: Customized exam created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customizedExamId:
+                    type: string
+                    description: The ID of the generated customized exam
+
+  /customized/{customizedExamId}/questionList:
+    get:
+      summary: Get list of questions for a customized exam
+      description: Returns all the questions generated for the specified customized exam.
+      tags:
+        - Customized Exams
+      parameters:
+        - name: customizedExamId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of customized questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    questionId:
+                      type: string
+                    problem_statement:
+                      type: string
+                    type:
+                      type: string
+                      enum: [mcq, fill in the blanks]
+                    options:
+                      type: array
+                      items:
+                        type: string
+                      description: Options for MCQ questions (if applicable)
+        '404':
+          description: Customized exam not found
+
+  /customized/{customizedExamId}/{questionId}/submit:
+    post:
+      summary: Submit an answer for a customized question
+      description: Submits a user's answer for a specific question in a customized exam.
+      tags:
+        - Customized Exams
+      parameters:
+        - name: customizedExamId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answer:
+                  type: string
+                  description: MCQ option or string answer for fill-in-the-blank
+      responses:
+        '200':
+          description: Answer submitted successfully
+        '400':
+          description: Invalid input
+
+  /customized/{customizedExamId}/submit:
+    get:
+      summary: Submit customized exam end time
+      description: Marks the customized exam as completed and logs the end time.
+      tags:
+        - Customized Exams
+      parameters:
+        - name: customizedExamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customized exam submitted successfully
+        '404':
+          description: Customized exam not found
+
+  /submissions/customized:
+    get:
+      summary: Get all customized exams previously generated by the user
+      description: Returns a list of all customized exams the user has generated and attempted.
+      tags:
+        - Submissions
+      responses:
+        '200':
+          description: List of customized exam submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    customizedExamId:
+                      type: string
+                    topic:
+                      type: string
+                    subject:
+                      type: string
+                    generated_at:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+                      enum: [in progress, submitted, evaluated]
+        '404':
+          description: No customized exams found
+
+  /submissions/customized/{customizedExamId}:
+    get:
+      summary: Get detailed submission for a customized exam
+      description: Returns all the questions and submitted answers for a given customized exam.
+      tags:
+        - Submissions
+      parameters:
+        - name: customizedExamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed customized exam submission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customizedExamId:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        questionId:
+                          type: string
+                        problem_statement:
+                          type: string
+                        user_answer:
+                          type: string
+                        correct_answer:
+                          type: string
+                        is_correct:
+                          type: boolean
+        '404':
+          description: Customized exam submission not found
+
+  /problems:
+    get:
+      summary: Get a list of problems based on query parameters
+      description: Returns a list of problems filtered by topic, difficulty, previously attempted, and subject.
+      tags:
+        - Problems
+      parameters:
+        - name: topic
+          in: query
+          required: false
+          description: The topic of the problem
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          required: false
+          description: The difficulty level of the problem
+          schema:
+            type: string
+        - name: previously_attempted
+          in: query
+          required: false
+          description: Filter problems that were previously attempted by the user (true/false)
+          schema:
+            type: boolean
+        - name: subject
+          in: query
+          required: false
+          description: The subject of the problem (e.g., Mathematics, Physics)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of problems matching the filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    topic:
+                      type: string
+                    subject:
+                      type: string
+                    difficulty:
+                      type: string
+                    problem_statement:
+                      type: string
+                    options:
+                      type: array
+                      items:
+                        type: string
+                      description: Options for MCQ questions (if applicable)
+        '400':
+          description: Invalid query parameters
+
+  /problems/dailyProblem:
+    get:
+      summary: Get the daily problem ID for a given date
+      description: Returns the problem ID that was assigned as the daily problem for the specified date.
+      tags:
+        - Problems
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Date for which to fetch the daily problem
+          schema:
+            type: string
+            format: date
+            example: "2025-05-12"
+      responses:
+        '200':
+          description: Daily problem found for the given date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  problem_id:
+                    type: integer
+        '404':
+          description: No problem found for the given date
+        '400':
+          description: Invalid date format
+
+  /problems/{problemId}:
+    get:
+      summary: Get details of a specific problem
+      description: Returns the details of a specific problem, including the problem statement and options.
+      tags:
+        - Problems
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          description: The ID of the problem
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Details of the specified problem
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  topic:
+                    type: string
+                  subject:
+                    type: string
+                  difficulty:
+                    type: string
+                  problem_statement:
+                    type: string
+                  options:
+                    type: array
+                    items:
+                      type: string
+                    description: Options for MCQ questions (if applicable)
+        '404':
+          description: Problem not found
+
+  /problems/{problemId}/submit:
+    post:
+      summary: Submit a solution for a specific problem
+      description: Submits the user's answer for a specific problem. The request body will contain either options for MCQs or a string for gap-filling questions.
+      tags:
+        - Problems
+      parameters:
+        - name: problemId
+          in: path
+          required: true
+          description: The ID of the problem
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answer:
+                  type: string
+                  description: The user's answer for the problem. Could be an option for MCQs or a string for gap-filling questions.
+                  example: "Option A"  # For MCQ or "String Answer" for Fill in the blanks
+      responses:
+        '200':
+          description: Problem answer submitted successfully
+        '400':
+          description: Invalid answer format
+
+  /submissions/problems:
+    get:
+      summary: Get all previously submitted problems
+      description: Returns a list of all problems that have been submitted by the user.
+      tags:
+        - Submissions
+      responses:
+        '200':
+          description: A list of previously submitted problems
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    problem_id:
+                      type: integer
+                    user_submission:
+                      type: string
+                    submitted_at:
+                      type: string
+                      format: date-time
+        '404':
+          description: No submissions found
+
+
+  /liveExams:
+    get:
+      summary: Get all live exams
+      description: Returns a list of all live exams.
+      tags:
+        - Live Exams
+      responses:
+        '200':
+          description: A list of live exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: The unique ID of the live exam
+                    name:
+                      type: string
+                      description: The name of the live exam
+                    start_time:
+                      type: string
+                      format: date-time
+                      description: The start time of the exam
+                    duration:
+                      type: integer
+                      description: Duration of the exam in minutes
+                    subject:
+                      type: string
+                      description: The subject of the live exam
+                    topic:
+                      type: string
+                      description: The topic of the live exam
+                    state:
+                      type: string
+                      enum:
+                        - before start
+                        - running
+                        - judging
+                        - ended
+                      description: The state of the exam
+
+  /liveExams/{liveExamsId}:
+    get:
+      summary: Get specific live exam details
+      description: Returns the details of a specific live exam.
+      tags:
+        - Live Exams
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Details of a specific live exam
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  start_time:
+                    type: string
+                    format: date-time
+                  duration:
+                    type: integer
+                  subject:
+                    type: string
+                  topic:
+                    type: string
+                  state:
+                    type: string
+                    enum:
+                      - before start
+                      - running
+                      - judging
+                      - ended
+        '404':
+          description: Exam not found
+
+  /liveExams/{liveExamsId}/problems:
+    get:
+      summary: Get list of problems for a specific live exam
+      description: Returns the list of problems for the specified live exam, shuffled randomly.
+      tags:
+        - Live Exams
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of problems for the live exam
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    type:
+                      type: string
+                      enum:
+                        - mcq
+                        - fill in the blanks
+                    topic:
+                      type: string
+                    subject:
+                      type: string
+                    problem_statement:
+                      type: string
+                    options:
+                      type: array
+                      items:
+                        type: string
+                      description: Options for MCQ questions
+        '404':
+          description: Exam or problems not found
+
+  /liveExams/{liveExamsId}/problem/{problemId}/submit:
+    post:
+      summary: Submit a problem answer
+      description: Submits an answer for the specified problem.
+      tags:
+        - Live Exams
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+        - name: problemId
+          in: path
+          required: true
+          description: The ID of the problem
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answer:
+                  type: string
+                  description: The user's answer for the problem
+                  example: "Option A"  # For MCQ or "String Answer" for Fill in the blanks
+      responses:
+        '200':
+          description: Problem answer submitted successfully
+        '400':
+          description: Invalid answer format
+  
+    patch:
+      summary: Edit a problem answer
+      description: Re-submits an answer for the specified problem.
+      tags:
+        - Live Exams
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+        - name: problemId
+          in: path
+          required: true
+          description: The ID of the problem
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answer:
+                  type: string
+                  description: The user's answer for the problem
+                  example: "Option A"  # For MCQ or "String Answer" for Fill in the blanks
+      responses:
+        '200':
+          description: Problem answer submitted successfully
+        '400':
+          description: Invalid answer format
+
+  /liveExams/{liveExamsId}/submit:
+    get:
+      summary: End the live exam for the user
+      description: Ends the live exam for the user.
+      tags:
+        - Live Exams
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Live exam ended successfully
+        '404':
+          description: Live exam not found
+          
+  /submissions/liveExams/{liveExamsId}:
+    get:
+      summary: Get all submissions for a specific live exam
+      description: Returns a list of all problems and user submissions for the live exam.
+      tags:
+        - Submissions
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of submissions for the live exam
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    problem_id:
+                      type: integer
+                    user_submission:
+                      type: string
+        '404':
+          description: Submissions not found        
+  /submissions/liveExams:
+    get:
+      summary: Get all live exam submissions by the user
+      description: Returns a list of all live exams the user has participated in, along with their submission metadata.
+      tags:
+        - Submissions
+      responses:
+        '200':
+          description: List of live exam submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    liveExam_id:
+                      type: integer
+                      description: The ID of the live exam
+                    name:
+                      type: string
+                      description: Name of the live exam
+                    submitted_at:
+                      type: string
+                      format: date-time
+                      description: The time the user submitted the exam
+                    status:
+                      type: string
+                      enum: [submitted, pending, judged]
+                      description: Current status of the submission
+                    score:
+                      type: number
+                      format: float
+                      description: Final score received (if judged)
+        '404':
+          description: No live exam submissions found
+        '401':
+          description: Unauthorized or user session expired
+
+  /liveExams/{liveExamsId}/rank:
+    get:
+      summary: Get ranking for a live exam
+      description: Returns the ranking of participants for the live exam.
+      tags:
+        - Live Exams
+      parameters:
+        - name: liveExamsId
+          in: path
+          required: true
+          description: The ID of the live exam
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ranking for the live exam
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_id:
+                      type: integer
+                    score:
+                      type: integer
+                    rank:
+                      type: integer
+        '404':
+          description: Ranking data not found
+
+       
+  /channels:
+    post:
+      tags:
+        - channel
+      summary: Create a channel
+      description: Create a new channel. Cannot exceed hierarchy level 6.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - parent
+              properties:
+                name:
+                  type: string
+                  example: CddDc_QcX2jzHEyf6
+                  description: Name of the new channel
+                parent:
+                  type: string
+                  format: uuid
+                  description: Parent channel ID
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict – A channel with the specified name already exists
+
+    get:
+      tags:
+        - channel
+      summary: Get the channel list
+      description: Retrieves a list of channels.
+      parameters:
+        - in: query
+          name: include-dm
+          schema:
+            type: boolean
+            default: false
+          description: Whether to include direct message channels
+        - in: query
+          name: path
+          schema:
+            type: string
+          description: Filter by channel path
+      responses:
+        '200':
+          description: List of channels grouped by type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  private:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+                  dm:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+
+
+  /channels/{channelId}:
+    get:
+      tags:
+        - channel
+      summary: Get channel information
+      description: Gets information about the specified channel.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: Channel UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK – Channel information retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  parentId:
+                    type: string
+                    format: uuid
+                  Archived:
+                    type: boolean
+                  force:
+                    type: boolean
+                  topic:
+                    type: string
+                  name:
+                    type: string
+                  children:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+        '404':
+          description: Not Found – Channel not found.
+
+    patch:
+      tags:
+        - channel
+      summary: Change channel information
+      description: Changes information for the specified channel. Admin     permissions required.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: Channel UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New channel name
+                Archived:
+                  type: boolean
+                  description: Whether the channel is archived
+                force:
+                  type: boolean
+                  description: Whether to force the change
+                parent:
+                  type: string
+                  format: uuid
+                  description: UUID of the new parent channel
+      responses:
+        '204':
+          description: No Content – Channel updated.
+        '400':
+          description: Bad Request – Invalid input.
+        '403':
+          description: Forbidden – No permission.
+        '404':
+          description: Not Found – Channel not found.
+        '409':
+          description: Conflict – Channel name already exists.
+
+  /channels/{channelId}/messages:
+    post:
+      tags: 
+        - channel
+      summary: Post a message to a specified channel
+      description: Posts a message to a channel. If `embed` is true, message embedding will be done automatically.
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Channel UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: The content of the message.
+                embed:
+                  type: boolean
+                  description: Whether to embed the message content.
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Message ID
+                  userId:
+                    type: string
+                    description: User ID of the sender
+                  channelId:
+                    type: string
+                    description: Channel ID
+                  content:
+                    type: string
+                    description: The content of the message
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Update timestamp
+                  pinned:
+                    type: boolean
+                    description: Whether the message is pinned
+                  threadId:
+                    type: string
+                    description: The thread ID if the message is part of a thread
+        '400':
+          description: Bad Request
+        '404':
+          description: Channel not found
+
+    get:
+      tags:
+        - channel
+      summary: Get a list of messages from a channel
+      description: Retrieves a list of messages from the specified channel with optional filters.
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Channel UUID
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            description: The number of messages to retrieve
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            description: The offset for retrieving messages
+        - in: query
+          name: since
+          schema:
+            type: string
+            format: date-time
+            description: Start date and time of the time range to retrieve messages
+        - in: query
+          name: until
+          schema:
+            type: string
+            format: date-time
+            description: End date and time of the time range to retrieve messages
+        - in: query
+          name: inclusive
+          schema:
+            type: boolean
+            description: Whether to include the end dates in the range
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+            description: Order of messages by creation or update time
+      responses:
+        '200':
+          description: A list of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Message ID
+                    userId:
+                      type: string
+                      description: User ID of the sender
+                    channelId:
+                      type: string
+                      description: Channel ID
+                    content:
+                      type: string
+                      description: The content of the message
+                    createdAt:
+                      type: string
+                      format: date-time
+                      description: Creation timestamp
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      description: Update timestamp
+                    pinned:
+                      type: boolean
+                      description: Whether the message is pinned
+                    threadId:
+                      type: string
+                      description: The thread ID if the message is part of a thread
+        '400':
+          description: Bad Request
+        '404':
+          description: Channel not found
+
+  /messages/{messageId}:
+    get: 
+      tags:
+        - messages
+      summary: Get a specific message
+      description: Retrieves a specific message based on its message ID.
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Message UUID
+      responses:
+        '200':
+          description: The requested message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Message ID
+                  userId:
+                    type: string
+                    description: User ID of the sender
+                  channelId:
+                    type: string
+                    description: Channel ID
+                  content:
+                    type: string
+                    description: The content of the message
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Creation timestamp
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: Update timestamp
+                  pinned:
+                    type: boolean
+                    description: Whether the message is pinned
+                  threadId:
+                    type: string
+                    description: The thread ID if the message is part of a thread
+        '404':
+          description: Message not found
+
+    put: 
+      tags:
+        - messages
+      summary: Edit a specific message
+      description: Edits the specified message.
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Message UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: The new content of the message
+                embed:
+                  type: boolean
+                  description: Whether to embed the message content
+      responses:
+        '204':
+          description: No Content – Successfully edited the message
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden – You do not have permission to edit this message
+        '404':
+          description: Not Found – Message not found
+
+    delete:
+      tags: 
+        - messages
+      summary: Delete a specific message
+      description: Deletes the specified message.
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Message UUID
+      responses:
+        '204':
+          description: No Content – Successfully deleted the message
+        '403':
+          description: Forbidden – You do not have permission to delete this message
+        '404':
+          description: Not Found – Message not found
+
+  /messages/{messageId}/pin:
+    post:
+      tags:
+        - messages
+      summary: Pin a specific message
+      description: Pins the specified message in the channel.
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Message UUID
+      responses:
+        '201':
+          description: Created – The message has been pinned
+        '400':
+          description: Bad Request
+        '404':
+          description: Message not found
+
+    delete:
+      tags:
+        - messages
+      summary: Unpin a specific message
+      description: Unpins the specified message.
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Message UUID
+      responses:
+        '204':
+          description: No Content – The message has been unpinned
+        '400':
+          description: Bad Request
+        '404':
+          description: Message not found
+    
+
+  /users/{userId}:
+    get:
+      tags:
+        - User
+      summary: Get detailed user information
+      description: Gets detailed information about the specified user.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User UUID
+      responses:
+        '200':
+          description: OK – User details returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  dob:
+                    type: string
+                    format: date
+                  hscBatch:
+                    type: integer
+                    
+                  institute:
+                    type: string
+                  displayname:
+                    type: string
+                  
+                  lastOnline:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  bio:
+                    type: string
+                  address:
+                    type: string
+                    format: uuid
+                  groups:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                  
+        '404':
+          description: Not Found – User not found.
+  /admin/{userId}:
+    patch:
+      tags:
+        - Admin
+      summary: Change user information
+      description: Changes the information for the specified user. Admin privileges required.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  dob:
+                    type: string
+                    format: date
+                  hscBatch:
+                    type: integer
+                    
+                  institute:
+                    type: string
+                  displayname:
+                    type: string
+                  
+                  lastOnline:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  bio:
+                    type: string
+                  address:
+                    type: string
+                    format: uuid
+                  groups:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+      responses:
+        '204':
+          description: No Content – User info updated.
+        '400':
+          description: Bad Request – Invalid request data.
+        '403':
+          description: Forbidden – Insufficient privileges.
+        '404':
+          description: Not Found – User not found.
+  /admin/{userId}/password:
+    put:
+      tags:
+        - Admin
+      summary: Change a user's password
+      description: Changes the password for the specified user. Administrator privileges are required.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: UUID of the user whose password is to be changed
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newPassword
+              properties:
+                newPassword:
+                  type: string
+                  description: The new password to be set
+                  example: ADB;]f0cG'bPv!6vb>>^SEko%Q+RxR=9
+      responses:
+        '204':
+          description: No Content – Password changed successfully.
+        '400':
+          description: Bad Request – Invalid password format or request structure.
+        '403':
+          description: Forbidden – Admin privileges required.
+        '404':
+          description: Not Found – User not found.
+
+  /users/{userId}/dm-channel:
+    get:
+      tags:
+        - User
+      summary: Get DM channel information
+      description: Returns information about direct message channels with the specified user. Creates a new channel if none exists.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User UUID
+      responses:
+        '200':
+          description: OK – DM channel info returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+        '404':
+          description: Not Found – User not found.
+    
+
+  /files:
+    post:
+      tags:
+        - file
+      summary: Upload file
+      description: Uploads a file to the specified channel. Uploading to archived channels is not allowed.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - channelId
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file body
+                channelId:
+                  type: string
+                  format: uuid
+                  description: The upload destination channel UUID
+      responses:
+        '201':
+          description: Created – File uploaded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMeta'
+        '400':
+          description: Bad Request
+        '411':
+          description: Length Required
+        '413':
+          description: Request Entity Too Large
+
+    get:
+      tags:
+        - file
+      summary: Get the list of file meta
+      description: Gets a list of file meta. At least one of `channelId` or `mine` must be provided.
+      parameters:
+        - name: channelId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            example: 150
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+            default: '0000-01-01T00:00:00.000000Z'
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: inclusive
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: mine
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK – List of file metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileMeta'
+          headers:
+            X-TRAQ-MORE:
+              description: Whether more files exist beyond the retrieved range
+              schema:
+                type: boolean
+        '400':
+          description: Bad Request
+
+  /files/{fileId}:
+    get:
+      tags:
+        - file
+      summary: Download file
+      description: Gets the body of the specified file.
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: dl
+          in: query
+          schema:
+            type: integer
+            description: Set to 1 to trigger Content-Disposition for download
+      responses:
+        '200':
+          description: OK – Returns the file body
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: File download disposition
+              schema:
+                type: string
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+
+    delete:
+      tags:
+        - file
+      summary: Delete the file
+      description: Deletes the specified file.
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No Content – File deleted
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+
+  /files/{fileId}/meta:
+    get:
+      tags:
+        - file
+      summary: Get file meta
+      description: Gets the meta information of the specified file.
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK – File metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileMeta'
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+
+  /files/{fileId}/thumbnail:
+    get:
+      tags:
+        - file
+      summary: Gets the thumbnail image
+      description: Gets a thumbnail of the specified file.
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [image, waveform]
+            default: image
+      responses:
+        '200':
+          description: OK – Thumbnail returned
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+
+
+  /users/me:
+    get:
+      tags:
+        - me
+      summary: Get your user details
+      description: Retrieves detailed information about the currently authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  dob:
+                    type: string
+                    format: date
+                  hscBatch:
+                    type: integer
+                  institute:
+                    type: string
+                  displayname:
+                    type: string
+                  lastOnline:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  bio:
+                    type: string
+                  address:
+                    type: string
+                    format: uuid
+                  groups:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+        '401':
+          description: Unauthorized
+  
+    patch:
+      tags:
+        - me
+      summary: Change your user information
+      description: Updates the authenticated user's personal information.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayname:
+                  type: string
+                twitterId:
+                  type: string
+                bio:
+                  type: string
+                homeChannel:
+                  type: string
+                  format: uuid
+      responses:
+        '204':
+          description: No Content has been changed.
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+  
+
+  # /users/me:
+  #   get:
+  #     tags:
+  #       - me
+  #     summary: Get your user details
+  #     description: Retrieves detailed information about the currently authenticated user.
+  #     responses:
+  #       '200':
+  #         description: OK
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 id:
+  #                   type: string
+  #                   format: uuid
+  #                 bio:
+  #                   type: string
+  #                 groups:
+  #                   type: array
+  #                   items:
+  #                     type: string
+  #                     format: uuid
+  #                 tags:
+  #                   type: array
+  #                   items:
+  #                     type: object
+  #                     properties:
+  #                       tagId:
+  #                         type: string
+  #                         format: uuid
+  #                       Tag:
+  #                         type: string
+  #                       isLocked:
+  #                         type: boolean
+  #                       createdAt:
+  #                         type: string
+  #                         format: date-time
+  #                       updatedAt:
+  #                         type: string
+  #                         format: date-time
+  #                 updatedAt:
+  #                   type: string
+  #                   format: date-time
+  #                 lastOnline:
+  #                   type: string
+  #                   format: date-time
+  #                 twitterId:
+  #                   type: string
+  #                 name:
+  #                   type: string
+  #                 displayname:
+  #                   type: string
+  #                 iconFileId:
+  #                   type: string
+  #                   format: uuid
+  #                 bot:
+  #                   type: boolean
+  #                 state:
+  #                   type: integer
+  #                 permissions:
+  #                   type: array
+  #                   items:
+  #                     type: string
+  #                 homeChannel:
+  #                   type: string
+  #                   format: uuid
+  #       '401':
+  #         description: Unauthorized
+
+  #   patch:
+  #     tags:
+  #       - me
+  #     summary: Change your user information
+  #     description: Updates the authenticated user's personal information.
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             type: object
+  #             properties:
+  #               displayname:
+  #                 type: string
+  #               twitterId:
+  #                 type: string
+  #               bio:
+  #                 type: string
+  #               homeChannel:
+  #                 type: string
+  #                 format: uuid
+  #     responses:
+  #       '204':
+  #         description: No Content has been changed.
+  #       '400':
+  #         description: Bad Request
+  #       '401':
+  #         description: Unauthorized
+        
+  /users/me/subscriptions/{channelId}:
+    get:
+      tags:
+        - me
+      summary: Get your channel subscription status
+      description: Gets your channel subscription status.
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Channel UUID
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    channelId:
+                      type: string
+                      format: uuid
+                      description: Unique ID of the subscribed channel
+                    Level:
+                      type: integer
+                      description: Subscription level
+
+  
+    put:
+      tags:
+        - me
+      summary: Sets the channel subscription level
+      description: Sets the subscription level for the specified channel.
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Channel UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - Level
+              properties:
+                Level:
+                  type: integer
+                  description: Subscription level to set
+                  example: 0
+      responses:
+        '204':
+          description: No Content – Subscription level updated.
+        '400':
+          description: Bad Request – Invalid input.
+        '403':
+          description: Forbidden – Cannot change subscription level.
+        '404':
+          description: Not Found – Channel not found.
+
+
+
+  /users/me/unread/{channelId}:
+    delete:
+      tags:
+        - me
+      summary: Mark the channel as read
+      description: Marks the specified channel as read for the current user.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: UUID of the channel to mark as read
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No Content – The channel has been marked as read.
+
+  /users/me/stars:
+    get:
+      tags:
+        - me
+      summary: Get star channel list
+      description: Gets an array of UUIDs of channels you're starred in.
+      responses:
+        '200':
+          description: OK – List of starred channel UUIDs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+                  example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+    post:
+      tags:
+        - me
+      summary: Add channel to star
+      description: Adds the specified channel to the star channel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channelId
+              properties:
+                channelId:
+                  type: string
+                  format: uuid
+                  example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+      responses:
+        '204':
+          description: No Content – Channel successfully starred.
+        '400':
+          description: Bad Request – Invalid channel ID.
+
+  /users/me/stars/{channelId}:
+    delete:
+      tags:
+        - me
+      summary: Remove channel from star
+      description: Removes the specified channel from the star list.
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Channel UUID
+      responses:
+        '204':
+          description: No Content – Channel removed from star list.
+
+  /users/me/unread:
+    get:
+      tags:
+        - me
+      summary: Get unread channels
+      description: Gets unread info for channels the user currently has unread.
+      responses:
+        '200':
+          description: OK – List of unread channels.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    channelId:
+                      type: string
+                      format: uuid
+                    count:
+                      type: integer
+                    Сирии:
+                      type: boolean
+                    since:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                    oldestMessageId:
+                      type: string
+                      format: uuid
+
+  /users/me/sessions:
+    get:
+      tags:
+        - me
+      summary: Get a list of your login sessions
+      description: Returns a list of your active login sessions.
+      responses:
+        '200':
+          description: OK – List of session objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    issuedAt:
+                      type: string
+                      format: date-time
+
+  /users/me/sessions/{sessionId}:
+    delete:
+      tags:
+        - me
+      summary: Invalidate the session
+      description: Invalidates the specified user's session (logs out).
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Session UUID
+      responses:
+        '204':
+          description: No Content – Session has been disabled.
+
+  
+
+  /users/me/password:
+    put:
+      tags:
+        - me
+      summary: Change your password
+      description: Change your own password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+                - newPassword
+              properties:
+                password:
+                  type: string
+                  description: Current password
+                  example: EwCSSwKw&d:xOF(K'R+TmRiLwEtk
+                newPassword:
+                  type: string
+                  description: New password
+                  example: t~#.Qqc?AL>tDloEj
+      responses:
+        '204':
+          description: No Content – The change was made.
+        '400':
+          description: Bad Request – Invalid input.
+        '401':
+          description: Unauthorized – The current password is incorrect.
+
+
+  /quesionSetter/profile:
+    get:
+      tags:
+        - QuestionSetter
+      summary: View Question Setter Profile
+      description: Returns profile of the logged-in question setter.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Setter profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionSetterProfile'
+
+  /quesionSetter/questions:
+    post:
+      tags:
+        - QuestionSetter
+      summary: Create a new question
+      description: Allows the question setter to create a new question (MCQ or Fill in the Blank).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questionId:
+                    type: string
+
+    get:
+      tags:
+        - QuestionSetter
+      summary: View all created questions
+      description: Returns a list of all questions created by the question setter.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+
+  /quesionSetter/questions/{questionId}:
+    put:
+      tags:
+        - QuestionSetter
+      summary: Edit an existing question
+      description: Allows the question setter to edit a previously created question.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Question'
+      responses:
+        '200':
+          description: Question updated successfully
+
+    delete:
+      tags:
+        - QuestionSetter
+      summary: Delete a question
+      description: Deletes a question by its ID if owned by the setter.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Question deleted successfully
+ 
+  /auth/signup:
+    post:
+      tags:
+      - Auth
+      summary: Sign up using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Invalid input (missing fields, weak password)
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Log in user
+      description: >
+        Authenticates a user using email and password. Optionally accepts a redirect URL.
+      parameters:
+        - name: redirectUrl
+          in: query
+          required: false
+          description: URL to redirect the user to after successful login (used with 302 response).
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '204':
+          description: No Content – You are logged in.
+        '302':
+          description: Found – You're logged in. Redirecting you.
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized – Your credentials are incorrect.
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Log out the current user
+      description: >
+        Logs the user out by invalidating session or clearing refresh tokens.
+  
+        In stateless auth systems (like Firebase), logout is handled on client side.
+  
+        Supports optional full logout from all sessions and redirecting after logout.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: redirect
+          in: query
+          description: The redirect destination URI
+          required: false
+          schema:
+            type: string
+            format: uri
+        - name: all
+          in: query
+          description: Whether to log out from all sessions
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '204':
+          description: No Content – You have been logged out.
+        '302':
+          description: Found – You have been logged out. Redirecting you.
+        '401':
+          description: Unauthorized (invalid or missing token)
+ 
+ 
+  /notifications:
+    get:
+      tags:
+      - Notification
+      summary: Get User Notifications
+      description: Retrieve paginated notifications for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: offset
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: size
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+  /notifications/{notificationId}:
+    put:
+      tags:
+      - Notification
+      summary: Mark Notification as Read
+      description: Mark a specific notification as read or update its status.
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read:
+                  type: boolean
+      responses:
+        '200':
+          description: Notification updated
+  /admin/users/{userId}:
+    delete:
+      tags:
+        - Admin
+      summary: Delete User
+      description: Delete a specific user account.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: User deleted
+  /admin/notifications:
+    post:
+      tags:
+        - Admin
+      summary: Send Notification
+      description: Send a notification to a specific user.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                notification:
+                  $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification sent
+  /admin/notifications/{notificationId}:
+    put:
+      tags:
+        - Admin
+      summary: Edit Notification
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification:
+                  $ref: '#/components/schemas/Notification'
+      responses:
+        '200':
+          description: Notification updated
+    delete:
+      tags:
+        - Admin
+      summary: Delete Notification
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Notification deleted
+  /admin/setters:
+    post:
+      tags:
+        - Admin
+      summary: Create Question Setter Account
+      description: Allows an admin to create a new question setter account using email and password.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: setter@example.com
+                password:
+                  type: string
+                  format: password
+                  example: StrongPass123!
+      responses:
+        '201':
+          description: Question setter account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  setterId:
+                    type: string
+                    description: ID of the newly created setter
+                  email:
+                    type: string
+        '400':
+          description: Invalid request (e.g., email already in use)
+        '403':
+          description: Unauthorized – admin privileges required
+
+ 
+  /progress:
+    get:
+      tags:
+        - Progress
+      summary: View Progress
+      description: Fetch user's ranking and streak data
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          required: true
+          description: Number of users to skip in ranking (for pagination)
+        - in: query
+          name: size
+          schema:
+            type: integer
+          required: true
+          description: Number of users to include in the ranking list
+      responses:
+        '200':
+          description: User ranking and streak data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentUser:
+                    type: object
+                    description: Current user's progress
+                    properties:
+                      rank:
+                        type: integer
+                        description: Current user's rank
+                      currentStreak:
+                        type: integer
+                        description: Number of consecutive active days
+                      longestStreak:
+                        type: integer
+                        description: Longest active streak recorded
+                  leaderboard:
+                    type: array
+                    description: List of top users based on ranking
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                          format: uuid
+                        displayName:
+                          type: string
+                        rank:
+                          type: integer
+                        currentStreak:
+                          type: integer
+                        longestStreak:
+                          type: integer
+
+ 
+  /ai/chat:
+    post:
+      tags:
+      - AI_assistance
+      summary: Start or continue a chat with AI
+      description: 'Starts a new chat session if `chatId` is not provided.
+
+        If `chatId` is provided, the message is added to the existing session.
+
+        '
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: User's message text
+                files:
+                  type: array
+                  items:
+                    type: string
+                  format: binary
+                  description: Optional field (files) for uploading files
+                chatId:
+                  type: string
+                  description: Optional chat session ID
+      responses:
+        '200':
+          description: AI responded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chatId:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid input (e.g., no message, multiple files, file too large)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Unauthorized (missing or invalid token)
+        '413':
+          description: Payload too large (file size exceeded)
+          
+  /ai/chat/list:
+    get:
+      tags:
+      - AI_assistance
+      summary: Get list of all chat sessions for the user
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of chat sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+        '401':
+          description: Unauthorized
+  /ai/chat/{chatId}:
+    get:
+      tags:
+      - AI_assistance
+      summary: Retrieve a specific chat session by ID
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+    delete:
+      tags:
+      - AI_assistance
+      summary: Delete a specific chat session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Chat session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  chatId:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+  /ai/chat/{chatId}/rename:
+    patch:
+      tags:
+      - AI_assistance
+      summary: Rename an existing chat session
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: chatId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: New chat name
+      responses:
+        '200':
+          description: Chat renamed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
+        '400':
+          description: Invalid request (e.g., empty name)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Chat not found
+  
+
+components:
+  schemas:
+    QuestionSetterProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        domain:
+          type: string
+
+    Question:
+      type: object
+      required:
+        - type
+        - subject
+        - topic
+        - problem_statement
+      properties:
+        type:
+          type: string
+          enum: [mcq, fill in the blanks]
+        subject:
+          type: string
+        topic:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        problem_statement:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+          description: Only for MCQ
+        answer:
+          type: string
+          description: Answer option for MCQ or answer string for fill in the blanks
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        channelId:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        pinned:
+          type: boolean
+        threadId:
+          type: string
+    FileMeta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime:
+          type: string
+        Size:
+          type: integer
+        md5:
+          type: string
+        isAnimatedImage:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        thumbnails:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              mime:
+                type: string
+              width:
+                type: integer
+              height:
+                type: integer
+        channelId:
+          type: string
+          format: uuid
+        uploaderId:
+          type: string
+          format: uuid
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+        Archived:
+          type: boolean
+        force:
+          type: boolean
+        topic:
+          type: string
+        name:
+          type: string
+        children:
+          type: array
+          items:
+            type: string
+            format: uuid
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
